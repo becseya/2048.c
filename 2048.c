@@ -21,6 +21,11 @@
 
 #define SIZE 4
 
+#define C_ARROW_UP 65
+#define C_ARROW_DOWN 66
+#define C_ARROW_RIGHT 67
+#define C_ARROW_LEFT 68
+
 // this function receives 2 pointers (indicated by *) so it can set their values
 void getColors(uint8_t value, uint8_t scheme, uint8_t *foreground, uint8_t *background)
 {
@@ -507,28 +512,28 @@ int main(int argc, char *argv[])
 		}
 		switch (c)
 		{
-		case 52:  // '4' key
-		case 97:  // 'a' key
-		case 104: // 'h' key
-		case 68:  // left arrow
+		case '4':
+		case 'a':
+		case 'h':
+		case C_ARROW_LEFT:
 			success = moveLeft(board, &score);
 			break;
-		case 54:  // '6' key
-		case 100: // 'd' key
-		case 108: // 'l' key
-		case 67:  // right arrow
+		case '6':
+		case 'd':
+		case 'l':
+		case C_ARROW_RIGHT:
 			success = moveRight(board, &score);
 			break;
-		case 56:  // '8' key
-		case 119: // 'w' key
-		case 107: // 'k' key
-		case 65:  // up arrow
+		case '8':
+		case 'w':
+		case 'k':
+		case C_ARROW_UP:
 			success = moveUp(board, &score);
 			break;
-		case 50:  // '2' key
-		case 115: // 's' key
-		case 106: // 'j' key
-		case 66:  // down arrow
+		case '2':
+		case 's':
+		case 'j':
+		case C_ARROW_DOWN:
 			success = moveDown(board, &score);
 			break;
 		default:
