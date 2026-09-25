@@ -51,6 +51,33 @@ uint8_t getDigitCount(uint32_t number)
 	return count;
 }
 
+const char *getSaveFilePath()
+{
+	static char saveFilePath[512];
+
+	const char *homeDir = getenv("HOME");
+
+	if (homeDir == NULL)
+	{
+		return "";
+	}
+
+	snprintf(saveFilePath, sizeof(saveFilePath), "%s/.local/share/2048.save", homeDir);
+
+	return saveFilePath;
+}
+
+bool fileExist(const char *path)
+{
+	FILE *file = fopen(path, "rb");
+	if (file != NULL)
+	{
+		fclose(file);
+		return true;
+	}
+	return false;
+}
+
 void drawBoard(uint8_t board[SIZE][SIZE], uint8_t scheme, uint32_t score)
 {
 	uint8_t x, y, fg, bg;
@@ -311,6 +338,38 @@ void addRandom(uint8_t board[SIZE][SIZE])
 	}
 }
 
+bool loadGame(const char *path, uint8_t board[SIZE][SIZE], uint32_t *score)
+{
+	FILE *file = fopen(path, "rb");
+
+	if (file == NULL)
+	{
+		return false;
+	}
+
+	fread(score, sizeof(*score), 1, file);
+	fread(board, sizeof(uint8_t), SIZE * SIZE, file);
+	fclose(file);
+
+	return true;
+}
+
+bool saveGame(const char *path, uint8_t board[SIZE][SIZE], uint32_t score)
+{
+	FILE *file = fopen(path, "wb");
+
+	if (file == NULL)
+	{
+		return false;
+	}
+
+	fwrite(&score, sizeof(score), 1, file);
+	fwrite(board, sizeof(uint8_t), SIZE * SIZE, file);
+	fclose(file);
+
+	return true;
+}
+
 void initBoard(uint8_t board[SIZE][SIZE])
 {
 	uint8_t x, y;
@@ -449,6 +508,8 @@ int main(int argc, char *argv[])
 	uint32_t score = 0;
 	int c;
 	bool success;
+	bool needToInitGame = true;
+	const char *saveFilePath = getSaveFilePath();
 
 	// handle the command line options
 	if (argc > 1)
@@ -493,15 +554,43 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	// make cursor invisible, erase entire screen
-	printf("\033[?25l\033[2J");
-
 	// register signal handler for when ctrl-c is pressed
 	signal(SIGINT, signal_callback_handler);
 
-	initBoard(board);
 	setBufferedInput(false);
+
+	if (fileExist(saveFilePath))
+	{
+		printf("A saved game was found. Would you like to load it? (y/n)\n");
+		c = getchar();
+		if (c == 'y')
+		{
+			if (loadGame(saveFilePath, board, &score))
+			{
+				needToInitGame = false;
+			}
+			else
+			{
+				printf("Failed to load the game. Press any key to start a new game.\n");
+				getchar();
+			}
+		}
+		else
+		{
+			remove(saveFilePath);
+		}
+	}
+
+	if (needToInitGame)
+	{
+		initBoard(board);
+	}
+
+	// make cursor invisible, erase entire screen
+	printf("\033[?25l\033[2J");
+
 	drawBoard(board, scheme, score);
+
 	while (true)
 	{
 		c = getchar();
@@ -553,13 +642,21 @@ int main(int argc, char *argv[])
 		}
 		if (c == 'q')
 		{
-			printf("        QUIT? (y/n)         \n");
-			c = getchar();
-			if (c == 'y')
+			if (saveGame(saveFilePath, board, score))
 			{
+				printf("\nGame saved successfully. Quitting...\n");
 				break;
 			}
-			drawBoard(board, scheme, score);
+			else
+			{
+				printf("Failed to save the game. Quit anyway? (y/n)\n");
+				c = getchar();
+				if (c == 'y')
+				{
+					break;
+				}
+				drawBoard(board, scheme, score);
+			}
 		}
 		if (c == 'r')
 		{
